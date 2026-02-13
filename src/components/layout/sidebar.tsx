@@ -8,6 +8,7 @@ import {
   ClipboardPaste,
   FileText,
   Users,
+  ListChecks,
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ const navItems = [
   { label: "Paste", href: "paste", icon: ClipboardPaste },
   { label: "Transcripts", href: "transcripts", icon: FileText },
   { label: "Technicians", href: "technicians", icon: Users },
+  { label: "Eval Criteria", href: "settings/criteria", icon: ListChecks },
   { label: "Settings", href: "settings", icon: Settings },
 ];
 
