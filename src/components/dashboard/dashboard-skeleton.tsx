@@ -47,25 +47,35 @@ export function DashboardSkeleton() {
         </CardContent>
       </Card>
 
-      {/* Charts skeleton */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-3">
-            <SkeletonBlock className="h-5 w-36" />
-          </CardHeader>
-          <CardContent>
-            <SkeletonBlock className="h-64 w-full" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <SkeletonBlock className="h-5 w-36" />
-          </CardHeader>
-          <CardContent>
-            <SkeletonBlock className="h-64 w-full" />
-          </CardContent>
-        </Card>
-      </div>
+      {/* Criteria chart skeleton */}
+      <Card>
+        <CardHeader className="pb-3">
+          <SkeletonBlock className="h-5 w-36" />
+        </CardHeader>
+        <CardContent>
+          <SkeletonBlock className="h-64 w-full" />
+        </CardContent>
+      </Card>
+
+      {/* Trend chart skeleton */}
+      <Card>
+        <CardHeader className="pb-3">
+          <SkeletonBlock className="h-5 w-36" />
+        </CardHeader>
+        <CardContent>
+          <SkeletonBlock className="h-64 w-full" />
+        </CardContent>
+      </Card>
+
+      {/* Needs attention skeleton */}
+      <Card>
+        <CardHeader className="pb-3">
+          <SkeletonBlock className="h-5 w-36" />
+        </CardHeader>
+        <CardContent>
+          <SkeletonBlock className="h-40 w-full" />
+        </CardContent>
+      </Card>
     </div>
   );
 }

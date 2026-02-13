@@ -28,6 +28,13 @@ export async function GET(
   const startDate = searchParams.get("startDate")
     ? new Date(searchParams.get("startDate")!)
     : subDays(now, 30);
+
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return NextResponse.json(
+      { error: "Invalid date format" },
+      { status: 400 }
+    );
+  }
   const technicianIds = searchParams.get("technicianIds")
     ? searchParams.get("technicianIds")!.split(",").filter((id) => UUID_RE.test(id))
     : null;
@@ -102,6 +109,34 @@ export async function GET(
       ? evalResults.filter((r) => criteriaIds.includes(r.eval_criteria_id))
       : evalResults;
 
+    // Pre-compute lookup Maps for O(1) access
+    const transcriptMap = new Map(allTranscripts.map((t) => [t.id, t]));
+    const resultsByCriteria = new Map<string, typeof filteredResults>();
+    const resultsByTranscript = new Map<string, typeof filteredResults>();
+    for (const r of filteredResults) {
+      // By criteria
+      if (!resultsByCriteria.has(r.eval_criteria_id)) {
+        resultsByCriteria.set(r.eval_criteria_id, []);
+      }
+      resultsByCriteria.get(r.eval_criteria_id)!.push(r);
+      // By transcript
+      if (!resultsByTranscript.has(r.transcript_id)) {
+        resultsByTranscript.set(r.transcript_id, []);
+      }
+      resultsByTranscript.get(r.transcript_id)!.push(r);
+    }
+
+    // Pre-compute completed transcript IDs by technician
+    const completedByTech = new Map<string, string[]>();
+    for (const t of allTranscripts) {
+      if (t.eval_status === "completed") {
+        if (!completedByTech.has(t.technician_id)) {
+          completedByTech.set(t.technician_id, []);
+        }
+        completedByTech.get(t.technician_id)!.push(t.id);
+      }
+    }
+
     // ======== OVERVIEW ========
     const totalTranscripts = allTranscripts.length;
     const totalResults = filteredResults.length;
@@ -160,12 +195,11 @@ export async function GET(
 
     // ======== CRITERIA PASS RATES ========
     const criteriaPassRates = criteria.map((c) => {
-      const results = filteredResults.filter((r) => r.eval_criteria_id === c.id);
+      const results = resultsByCriteria.get(c.id) || [];
       const passed = results.filter((r) => r.passed === true).length;
       return {
         criteriaId: c.id,
         criteriaName: c.name,
-        category: c.category,
         passRate: results.length > 0 ? passed / results.length : null,
         totalEvals: results.length,
         targetPassRate: c.target_pass_rate ?? 0.8,
@@ -183,43 +217,6 @@ export async function GET(
           )
         : null;
 
-    // ======== TECHNICIAN COMPARISON ========
-    const techComparison = technicians.map((tech) => {
-      const techTranscriptIds = allTranscripts
-        .filter(
-          (t) =>
-            t.technician_id === tech.id && t.eval_status === "completed"
-        )
-        .map((t) => t.id);
-
-      const techResults = filteredResults.filter((r) =>
-        techTranscriptIds.includes(r.transcript_id)
-      );
-
-      const techPassed = techResults.filter((r) => r.passed === true).length;
-      const overallRate =
-        techResults.length > 0 ? techPassed / techResults.length : null;
-
-      const criteriaBreakdown = criteria.map((c) => {
-        const cResults = techResults.filter(
-          (r) => r.eval_criteria_id === c.id
-        );
-        const cPassed = cResults.filter((r) => r.passed === true).length;
-        return {
-          criteriaId: c.id,
-          criteriaName: c.name,
-          passRate: cResults.length > 0 ? cPassed / cResults.length : null,
-        };
-      });
-
-      return {
-        technicianId: tech.id,
-        technicianName: tech.name,
-        overallPassRate: overallRate,
-        criteriaBreakdown,
-      };
-    });
-
     // Most improved technician (current vs previous period)
     let mostImprovedTechnician: {
       id: string;
@@ -230,36 +227,47 @@ export async function GET(
     if (technicians.length > 0 && prevCompletedIds.length > 0) {
       let maxImprovement = -Infinity;
 
+      // Pre-compute previous period completed transcripts by tech
+      const prevCompletedByTech = new Map<string, string[]>();
+      for (const t of prevTranscripts || []) {
+        if (t.eval_status === "completed") {
+          if (!prevCompletedByTech.has(t.technician_id)) {
+            prevCompletedByTech.set(t.technician_id, []);
+          }
+          prevCompletedByTech.get(t.technician_id)!.push(t.id);
+        }
+      }
+
       for (const tech of technicians) {
         // Current period
-        const currentTechTranscripts = allTranscripts
-          .filter(
-            (t) =>
-              t.technician_id === tech.id && t.eval_status === "completed"
-          )
-          .map((t) => t.id);
-        const currentTechResults = filteredResults.filter((r) =>
-          currentTechTranscripts.includes(r.transcript_id)
-        );
-        if (currentTechResults.length === 0) continue;
-        const currentRate =
-          currentTechResults.filter((r) => r.passed === true).length /
-          currentTechResults.length;
+        const currentTechTranscriptIds = completedByTech.get(tech.id) || [];
+        let currentPassed = 0;
+        let currentTotal = 0;
+        for (const tId of currentTechTranscriptIds) {
+          const results = resultsByTranscript.get(tId) || [];
+          for (const r of results) {
+            currentTotal++;
+            if (r.passed === true) currentPassed++;
+          }
+        }
+        if (currentTotal === 0) continue;
+        const currentRate = currentPassed / currentTotal;
 
         // Previous period
-        const prevTechTranscripts = (prevTranscripts || [])
-          .filter(
-            (t) =>
-              t.technician_id === tech.id && t.eval_status === "completed"
-          )
-          .map((t) => t.id);
-        const prevTechResults = filteredPrevResults.filter((r) =>
-          prevTechTranscripts.includes(r.transcript_id)
-        );
-        if (prevTechResults.length === 0) continue;
-        const prevRate =
-          prevTechResults.filter((r) => r.passed === true).length /
-          prevTechResults.length;
+        const prevTechTranscriptIds = prevCompletedByTech.get(tech.id) || [];
+        let prevPassed = 0;
+        let prevTotal = 0;
+        for (const tId of prevTechTranscriptIds) {
+          const results = filteredPrevResults.filter(
+            (r) => r.transcript_id === tId
+          );
+          for (const r of results) {
+            prevTotal++;
+            if (r.passed === true) prevPassed++;
+          }
+        }
+        if (prevTotal === 0) continue;
+        const prevRate = prevPassed / prevTotal;
 
         const improvement = currentRate - prevRate;
         if (improvement > maxImprovement) {
@@ -275,17 +283,11 @@ export async function GET(
 
     // ======== HEATMAP DATA ========
     const heatmapData = technicians.flatMap((tech) => {
+      const techTranscriptIds = new Set(completedByTech.get(tech.id) || []);
       return criteria.map((c) => {
-        const techTranscriptIds = allTranscripts
-          .filter(
-            (t) =>
-              t.technician_id === tech.id && t.eval_status === "completed"
-          )
-          .map((t) => t.id);
-        const results = filteredResults.filter(
-          (r) =>
-            techTranscriptIds.includes(r.transcript_id) &&
-            r.eval_criteria_id === c.id
+        const criteriaResults = resultsByCriteria.get(c.id) || [];
+        const results = criteriaResults.filter((r) =>
+          techTranscriptIds.has(r.transcript_id)
         );
         const passed = results.filter((r) => r.passed === true).length;
         return {
@@ -327,9 +329,7 @@ export async function GET(
       if (result.passed === true) bucket.passed++;
 
       // Find which technician this result belongs to
-      const transcript = allTranscripts.find(
-        (t) => t.id === result.transcript_id
-      );
+      const transcript = transcriptMap.get(result.transcript_id);
       if (transcript?.technician_id) {
         const techId = transcript.technician_id;
         if (!bucket.techData.has(techId)) {
@@ -362,17 +362,15 @@ export async function GET(
       }));
 
     // ======== NEEDS ATTENTION ========
+    const techNameMap = new Map(technicians.map((t) => [t.id, t.name]));
     const transcriptPassRates = completedIds.map((tId) => {
-      const results = filteredResults.filter((r) => r.transcript_id === tId);
+      const results = resultsByTranscript.get(tId) || [];
       const passed = results.filter((r) => r.passed === true).length;
       const total = results.length;
-      const transcript = allTranscripts.find((t) => t.id === tId)!;
-      const tech = technicians.find(
-        (t) => t.id === transcript.technician_id
-      );
+      const transcript = transcriptMap.get(tId)!;
       return {
         transcriptId: tId,
-        technicianName: tech?.name || "Unknown",
+        technicianName: techNameMap.get(transcript.technician_id) || "Unknown",
         date: transcript.created_at,
         serviceType: transcript.service_type,
         passRate: total > 0 ? passed / total : null,
@@ -390,18 +388,11 @@ export async function GET(
       .slice(0, 10);
 
     // ======== SPARKLINE DATA (daily counts for cards) ========
-    const dailyMap = new Map<string, { passed: number; total: number; transcripts: number }>();
-    for (const t of allTranscripts) {
-      const day = format(new Date(t.created_at), "yyyy-MM-dd");
-      if (!dailyMap.has(day)) {
-        dailyMap.set(day, { passed: 0, total: 0, transcripts: 0 });
-      }
-      dailyMap.get(day)!.transcripts++;
-    }
+    const dailyMap = new Map<string, { passed: number; total: number }>();
     for (const r of filteredResults) {
       const day = format(new Date(r.created_at), "yyyy-MM-dd");
       if (!dailyMap.has(day)) {
-        dailyMap.set(day, { passed: 0, total: 0, transcripts: 0 });
+        dailyMap.set(day, { passed: 0, total: 0 });
       }
       dailyMap.get(day)!.total++;
       if (r.passed === true) dailyMap.get(day)!.passed++;
@@ -413,7 +404,6 @@ export async function GET(
         date,
         passRate: data.total > 0 ? data.passed / data.total : null,
         evaluations: data.total,
-        transcripts: data.transcripts,
       }));
 
     return NextResponse.json({
@@ -435,7 +425,6 @@ export async function GET(
           : null,
       },
       criteriaPassRates,
-      technicianComparison: techComparison,
       heatmapData,
       trendData,
       needsAttention,

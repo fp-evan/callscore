@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { subDays } from "date-fns";
 import { BarChart3, FileText, TrendingUp, AlertTriangle } from "lucide-react";
@@ -14,6 +14,22 @@ import { AttentionList } from "./attention-list";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { DashboardEmpty } from "./dashboard-empty";
 import type { DashboardData, DashboardFilters } from "@/lib/dashboard-types";
+
+function filtersToParams(filters: DashboardFilters): URLSearchParams {
+  const params = new URLSearchParams();
+  params.set("startDate", filters.startDate);
+  params.set("endDate", filters.endDate);
+  if (filters.technicianIds.length > 0) {
+    params.set("technicianIds", filters.technicianIds.join(","));
+  }
+  if (filters.criteriaIds.length > 0) {
+    params.set("criteriaIds", filters.criteriaIds.join(","));
+  }
+  if (!filters.excludeMock) {
+    params.set("excludeMock", "false");
+  }
+  return params;
+}
 
 interface Props {
   orgId: string;
@@ -48,59 +64,50 @@ export function DashboardView({ orgId }: Props) {
   const updateFilters = useCallback(
     (newFilters: DashboardFilters) => {
       setFilters(newFilters);
-      const params = new URLSearchParams();
-      params.set("startDate", newFilters.startDate);
-      params.set("endDate", newFilters.endDate);
-      if (newFilters.technicianIds.length > 0) {
-        params.set("technicianIds", newFilters.technicianIds.join(","));
-      }
-      if (newFilters.criteriaIds.length > 0) {
-        params.set("criteriaIds", newFilters.criteriaIds.join(","));
-      }
-      if (!newFilters.excludeMock) {
-        params.set("excludeMock", "false");
-      }
-      router.replace(`?${params.toString()}`, { scroll: false });
+      router.replace(`?${filtersToParams(newFilters).toString()}`, {
+        scroll: false,
+      });
     },
     [router]
   );
 
-  // Fetch dashboard data
+  // Fetch dashboard data with AbortController for stale request cancellation
+  const abortRef = useRef<AbortController | null>(null);
+
   const fetchData = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      params.set("startDate", filters.startDate);
-      params.set("endDate", filters.endDate);
-      if (filters.technicianIds.length > 0) {
-        params.set("technicianIds", filters.technicianIds.join(","));
-      }
-      if (filters.criteriaIds.length > 0) {
-        params.set("criteriaIds", filters.criteriaIds.join(","));
-      }
-      if (!filters.excludeMock) {
-        params.set("excludeMock", "false");
-      }
-
       const response = await fetch(
-        `/api/dashboard/${orgId}?${params.toString()}`
+        `/api/dashboard/${orgId}?${filtersToParams(filters).toString()}`,
+        { signal: controller.signal }
       );
       if (!response.ok) {
         throw new Error("Failed to load dashboard data");
       }
       const json = await response.json();
+      if (!json || !Array.isArray(json.criteriaPassRates)) {
+        throw new Error("Invalid dashboard response");
+      }
       setData(json);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       console.error("Dashboard fetch error:", err);
       setError("Failed to load dashboard data. Please try again.");
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [orgId, filters]);
 
   useEffect(() => {
     fetchData();
+    return () => abortRef.current?.abort();
   }, [fetchData]);
 
   const handleFilterByCriteria = useCallback(

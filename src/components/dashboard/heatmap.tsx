@@ -8,18 +8,14 @@ interface Props {
   orgId: string;
 }
 
-function getCellColor(passRate: number | null): string {
-  if (passRate === null) return "bg-gray-100 dark:bg-gray-800";
-  if (passRate >= 0.8) return "bg-green-100 dark:bg-green-900/40";
-  if (passRate >= 0.5) return "bg-amber-100 dark:bg-amber-900/40";
-  return "bg-red-100 dark:bg-red-900/40";
-}
-
-function getCellTextColor(passRate: number | null): string {
-  if (passRate === null) return "text-gray-400";
-  if (passRate >= 0.8) return "text-green-700 dark:text-green-300";
-  if (passRate >= 0.5) return "text-amber-700 dark:text-amber-300";
-  return "text-red-700 dark:text-red-300";
+function getCellClasses(passRate: number | null): string {
+  if (passRate === null)
+    return "bg-gray-100 dark:bg-gray-800 text-gray-400";
+  if (passRate >= 0.8)
+    return "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300";
+  if (passRate >= 0.5)
+    return "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300";
+  return "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300";
 }
 
 export function Heatmap({ data, orgId }: Props) {
@@ -53,7 +49,7 @@ export function Heatmap({ data, orgId }: Props) {
         : -1;
     return { ...tech, avgPassRate: avg };
   });
-  techPassRates.sort((a, b) => b.avgPassRate - a.avgPassRate);
+  const sortedTechs = [...techPassRates].sort((a, b) => b.avgPassRate - a.avgPassRate);
 
   if (technicians.length === 0 || criteria.length === 0) {
     return null;
@@ -89,7 +85,7 @@ export function Heatmap({ data, orgId }: Props) {
           </tr>
         </thead>
         <tbody>
-          {techPassRates.map((tech) => (
+          {sortedTechs.map((tech) => (
             <tr key={tech.id} className="border-t">
               <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium">
                 <Link
@@ -107,9 +103,7 @@ export function Heatmap({ data, orgId }: Props) {
                   <td key={c.id} className="px-1 py-1 text-center">
                     <Link
                       href={`/org/${orgId}/transcripts?technicianId=${tech.id}&criteriaId=${c.id}`}
-                      className={`flex items-center justify-center rounded px-2 py-2 text-xs font-medium transition-opacity hover:opacity-80 ${getCellColor(
-                        passRate
-                      )} ${getCellTextColor(passRate)}`}
+                      className={`flex items-center justify-center rounded px-2 py-2 text-xs font-medium transition-opacity hover:opacity-80 ${getCellClasses(passRate)}`}
                     >
                       {passRate !== null
                         ? `${Math.round(passRate * 100)}%`

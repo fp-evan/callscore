@@ -18,21 +18,9 @@ export interface DashboardOverview {
 export interface CriteriaPassRate {
   criteriaId: string;
   criteriaName: string;
-  category: string | null;
   passRate: number | null;
   totalEvals: number;
   targetPassRate: number;
-}
-
-export interface TechnicianComparison {
-  technicianId: string;
-  technicianName: string;
-  overallPassRate: number | null;
-  criteriaBreakdown: {
-    criteriaId: string;
-    criteriaName: string;
-    passRate: number | null;
-  }[];
 }
 
 export interface HeatmapCell {
@@ -67,13 +55,11 @@ export interface SparklinePoint {
   date: string;
   passRate: number | null;
   evaluations: number;
-  transcripts: number;
 }
 
 export interface DashboardData {
   overview: DashboardOverview;
   criteriaPassRates: CriteriaPassRate[];
-  technicianComparison: TechnicianComparison[];
   heatmapData: HeatmapCell[];
   trendData: TrendDataPoint[];
   needsAttention: NeedsAttentionItem[];
