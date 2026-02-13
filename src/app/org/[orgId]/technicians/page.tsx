@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase/server";
 import { computeTechnicianStats } from "@/lib/technician-stats";
 import { TechnicianManagement } from "@/components/technicians/technician-management";
+
+export const metadata: Metadata = { title: "Technicians" };
 
 export default async function TechniciansPage({
   params,

@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase/server";
 import { RecordingInterface } from "@/components/recording/recording-interface";
+
+export const metadata: Metadata = { title: "Record" };
 
 export default async function RecordPage({
   params,

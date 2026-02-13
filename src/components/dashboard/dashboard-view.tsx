@@ -242,7 +242,7 @@ export function DashboardView({ orgId }: Props) {
       )}
 
       {loading && data && (
-        <div className="fixed bottom-4 right-4 rounded-lg bg-card px-3 py-2 text-xs text-muted-foreground shadow-md">
+        <div className="fixed bottom-20 right-4 md:bottom-4 rounded-lg bg-card px-3 py-2 text-xs text-muted-foreground shadow-md">
           Refreshing...
         </div>
       )}

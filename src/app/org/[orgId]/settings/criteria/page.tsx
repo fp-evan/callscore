@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase/server";
 import { CriteriaManager } from "@/components/criteria/criteria-manager";
+
+export const metadata: Metadata = { title: "Eval Criteria" };
 
 export default async function CriteriaPage({
   params,

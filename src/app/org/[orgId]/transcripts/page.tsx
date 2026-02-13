@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase/server";
 import { TranscriptList } from "@/components/transcripts/transcript-list";
+
+export const metadata: Metadata = { title: "Transcripts" };
 
 export default async function TranscriptsPage({
   params,

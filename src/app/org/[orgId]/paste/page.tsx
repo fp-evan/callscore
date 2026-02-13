@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase/server";
 import { PasteForm } from "@/components/transcripts/paste-form";
+
+export const metadata: Metadata = { title: "Paste Transcript" };
 
 export default async function PastePage({
   params,

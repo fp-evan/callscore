@@ -237,7 +237,7 @@ export function TechnicianManagement({ orgId, initialTechnicians }: Props) {
             <Card key={tech.id} className="group relative">
               <CardContent className="p-5">
                 {/* Edit/Delete actions */}
-                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-3 right-3 flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -246,6 +246,7 @@ export function TechnicianManagement({ orgId, initialTechnicians }: Props) {
                       e.preventDefault();
                       openEdit(tech);
                     }}
+                    aria-label={`Edit ${tech.name}`}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -257,6 +258,7 @@ export function TechnicianManagement({ orgId, initialTechnicians }: Props) {
                         className="h-7 w-7 text-destructive hover:text-destructive"
                         onClick={(e) => e.preventDefault()}
                         disabled={deleting === tech.id}
+                        aria-label={`Delete ${tech.name}`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>

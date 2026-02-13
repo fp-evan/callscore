@@ -6,6 +6,7 @@ import {
   buildEvalUserPrompt,
   type EvalResponse,
 } from "@/lib/prompts/eval";
+import { sendEvalEmailAsync } from "@/lib/send-eval-email";
 import { z } from "zod";
 
 const evaluateSchema = z.object({
@@ -179,7 +180,12 @@ export async function POST(request: Request) {
     console.error("Transcript update error:", updateError);
   }
 
-  // 7. Return results
+  // 7. Fire-and-forget email notification (skip for mock transcripts)
+  if (transcript.source !== "mock") {
+    sendEvalEmailAsync(transcriptId).catch(() => {});
+  }
+
+  // 8. Return results
   const passedCount = evalResponse.results.filter((r) => r.passed).length;
 
   return NextResponse.json({

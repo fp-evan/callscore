@@ -83,6 +83,7 @@ export function AudioPlayer({ src }: Props) {
         variant="ghost"
         className="h-8 w-8 shrink-0"
         onClick={togglePlay}
+        aria-label={playing ? "Pause audio" : "Play audio"}
       >
         {playing ? (
           <Pause className="h-4 w-4" />

@@ -33,6 +33,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { EvalCriteria, FewShotExample } from "@/lib/supabase/types";
 
@@ -162,9 +173,6 @@ export function CriteriaManager({ orgId, initialCriteria }: Props) {
   };
 
   const handleDelete = async (id: string) => {
-    const criterion = criteria.find((c) => c.id === id);
-    if (!confirm(`Delete "${criterion?.name}"? This cannot be undone.`)) return;
-
     setCriteria((prev) => prev.filter((c) => c.id !== id));
     try {
       const response = await fetch(`/api/eval-criteria/${id}`, { method: "DELETE" });
@@ -320,7 +328,7 @@ function CriterionCard({
 
           <div className="flex items-center gap-2 shrink-0">
             {categoryLabel && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
                 {categoryLabel}
               </Badge>
             )}
@@ -331,7 +339,7 @@ function CriterionCard({
               {criterion.status === "published" ? "Published" : "Draft"}
             </Badge>
             {criterion.few_shot_examples.length > 0 && (
-              <Badge variant="outline" className="text-xs gap-1">
+              <Badge variant="outline" className="text-xs gap-1 hidden sm:inline-flex">
                 <BookOpen className="h-3 w-3" />
                 {criterion.few_shot_examples.length}
               </Badge>
@@ -420,15 +428,36 @@ function CriterionCard({
             />
 
             <div className="flex justify-end pt-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={onDelete}
-              >
-                <Trash2 className="mr-1 h-3.5 w-3.5" />
-                Delete
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="mr-1 h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete criterion?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete &ldquo;{criterion.name}&rdquo; and
+                      all associated few-shot examples. This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={onDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         )}
