@@ -26,7 +26,7 @@ export function buildMockCallUserPrompt(input: MockCallPromptInput): string {
 
   return `Generate a realistic transcript of a sales/service call between a technician named ${technicianName} and a customer.
 
-Scenario: ${scenario}
+<scenario>${scenario}</scenario>
 
 Guidelines:
 - Make the conversation natural, with realistic dialogue patterns (interruptions, filler words, clarifying questions)

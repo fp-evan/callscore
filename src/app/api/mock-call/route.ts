@@ -122,20 +122,24 @@ export async function POST(request: Request) {
     );
   }
 
-  // 6. Trigger eval pipeline
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  try {
-    const evalResponse = await fetch(`${appUrl}/api/evaluate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcriptId: transcript.id }),
-    });
+  // 6. Trigger eval pipeline (fire-and-forget)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (appUrl) {
+    try {
+      const evalResponse = await fetch(`${appUrl}/api/evaluate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcriptId: transcript.id }),
+      });
 
-    if (!evalResponse.ok) {
-      console.error("Mock call: eval trigger failed:", evalResponse.status);
+      if (!evalResponse.ok) {
+        console.error("Mock call: eval trigger failed:", evalResponse.status);
+      }
+    } catch (err) {
+      console.error("Mock call: eval trigger error:", err);
     }
-  } catch (err) {
-    console.error("Mock call: eval trigger error:", err);
+  } else {
+    console.warn("NEXT_PUBLIC_APP_URL not set — skipping eval trigger from mock-call");
   }
 
   return NextResponse.json({

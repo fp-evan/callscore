@@ -110,8 +110,6 @@ export function TechnicianProfile({
   criteria,
   mockTranscripts,
 }: Props) {
-  const router = useRouter();
-
   // Compute overall stats
   const overallStats = useMemo(() => {
     if (evalResults.length === 0) return { passRate: null, total: 0, passed: 0 };
@@ -341,7 +339,7 @@ export function TechnicianProfile({
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {criteriaStats
+                  {[...criteriaStats]
                     .sort((a, b) => a.passRate - b.passRate)
                     .map((c) => (
                       <div
@@ -451,7 +449,7 @@ function CallHistoryTab({
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex gap-3">
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as "date" | "score")}>
+        <Select value={sortBy} onValueChange={(v) => { if (v === "date" || v === "score") setSortBy(v); }}>
           <SelectTrigger className="w-36">
             <SelectValue />
           </SelectTrigger>

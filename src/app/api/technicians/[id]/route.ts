@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const updateTechnicianSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   role: z.string().max(200).nullable().optional(),
-  specialties: z.array(z.string()).nullable().optional(),
+  specialties: z.array(z.string().max(100)).max(20).nullable().optional(),
 });
 
 export async function GET(
@@ -13,6 +15,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!UUID_REGEX.test(id)) {
+    return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+  }
+
   const supabase = createServerClient();
 
   const { data, error } = await supabase
@@ -37,6 +43,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!UUID_REGEX.test(id)) {
+    return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+  }
+
   const supabase = createServerClient();
 
   let body: unknown;
@@ -77,6 +87,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!UUID_REGEX.test(id)) {
+    return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+  }
+
   const supabase = createServerClient();
 
   // Set transcripts.technician_id to null (don't cascade delete transcripts)
