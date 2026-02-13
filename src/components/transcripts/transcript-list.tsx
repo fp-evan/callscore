@@ -226,7 +226,10 @@ export function TranscriptList({ orgId, transcripts, technicians }: Props) {
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant={source.variant} className="text-xs gap-1">
+                      <Badge
+                        variant={source.variant}
+                        className={`text-xs gap-1 ${t.source === "mock" ? "bg-purple-50 text-purple-700 border-purple-200" : ""}`}
+                      >
                         <SourceIcon className="h-3 w-3" />
                         <span className="hidden sm:inline">{source.label}</span>
                       </Badge>
