@@ -56,11 +56,21 @@ export async function POST(request: Request) {
     );
   }
 
-  // 2. Update eval_status to 'processing'
-  await supabase
+  // 2. Atomically update eval_status to 'processing' (only if still pending/failed)
+  const { data: updated } = await supabase
     .from("transcripts")
     .update({ eval_status: "processing" })
-    .eq("id", transcriptId);
+    .eq("id", transcriptId)
+    .in("eval_status", ["pending", "failed"])
+    .select("id")
+    .single();
+
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Transcript is already being evaluated" },
+      { status: 409 }
+    );
+  }
 
   // 3. Fetch active published criteria with few-shot examples
   const { data: criteria, error: criteriaError } = await supabase
@@ -119,7 +129,7 @@ export async function POST(request: Request) {
       .eq("id", transcriptId);
 
     return NextResponse.json(
-      { error: `AI evaluation failed: ${errMsg}` },
+      { error: "AI evaluation failed — please try again" },
       { status: 502 }
     );
   }

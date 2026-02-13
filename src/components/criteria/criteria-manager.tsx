@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   GripVertical,
   Plus,
@@ -62,7 +62,8 @@ export function CriteriaManager({ orgId, initialCriteria }: Props) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
-  // Debounced save for inline edits
+  const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   const saveCriterion = useCallback(
     async (id: string, updates: Record<string, unknown>) => {
       setSaving((prev) => ({ ...prev, [id]: true }));
@@ -82,6 +83,20 @@ export function CriteriaManager({ orgId, initialCriteria }: Props) {
     []
   );
 
+  const debouncedSave = useCallback(
+    (id: string, updates: Record<string, unknown>) => {
+      const key = `${id}-${Object.keys(updates).join(",")}`;
+      if (debounceTimers.current[key]) {
+        clearTimeout(debounceTimers.current[key]);
+      }
+      debounceTimers.current[key] = setTimeout(() => {
+        saveCriterion(id, updates);
+        delete debounceTimers.current[key];
+      }, 500);
+    },
+    [saveCriterion]
+  );
+
   const updateLocalCriterion = (id: string, updates: Partial<CriterionWithExamples>) => {
     setCriteria((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
@@ -94,7 +109,12 @@ export function CriteriaManager({ orgId, initialCriteria }: Props) {
     value: string | boolean | number
   ) => {
     updateLocalCriterion(id, { [field]: value } as Partial<CriterionWithExamples>);
-    saveCriterion(id, { [field]: value });
+    // Instant save for toggles/selects, debounced for text
+    if (typeof value === "boolean" || field === "status" || field === "category") {
+      saveCriterion(id, { [field]: value });
+    } else {
+      debouncedSave(id, { [field]: value });
+    }
   };
 
   // Drag-and-drop handlers

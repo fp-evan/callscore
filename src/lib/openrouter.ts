@@ -7,6 +7,7 @@ interface OpenRouterOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  timeout?: number;
 }
 
 interface OpenRouterResponse {
@@ -28,37 +29,57 @@ export async function callOpenRouter(
     throw new Error("OPENROUTER_API_KEY is not configured");
   }
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://callscore.vercel.app",
-      "X-Title": "CallScore",
-    },
-    body: JSON.stringify({
-      model: options.model || DEFAULT_MODEL,
-      messages,
-      temperature: options.temperature ?? 0.2,
-      max_tokens: options.maxTokens ?? 4096,
-    }),
-  });
+  const timeoutMs = options.timeout ?? 45000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error("OpenRouter error:", response.status, errText);
-    throw new Error(`OpenRouter API error ${response.status}: ${errText.slice(0, 200)}`);
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://callscore.vercel.app",
+        "X-Title": "CallScore",
+      },
+      body: JSON.stringify({
+        model: options.model || DEFAULT_MODEL,
+        messages,
+        temperature: options.temperature ?? 0.2,
+        max_tokens: options.maxTokens ?? 4096,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("OpenRouter error:", response.status, errText);
+      throw new Error(
+        response.status === 401
+          ? "API authentication failed"
+          : response.status === 429
+          ? "Rate limit exceeded — try again shortly"
+          : "External AI service error"
+      );
+    }
+
+    const data = await response.json();
+    const content = (data as OpenRouterResponse).choices?.[0]?.message?.content;
+
+    if (!content) {
+      throw new Error("Empty response from OpenRouter");
+    }
+
+    return content;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("AI evaluation timed out — the transcript may be too long");
+    }
+    throw err;
   }
-
-  const data = await response.json();
-  console.log("OpenRouter response keys:", Object.keys(data));
-  const content = (data as OpenRouterResponse).choices?.[0]?.message?.content;
-
-  if (!content) {
-    throw new Error("Empty response from OpenRouter");
-  }
-
-  return content;
 }
 
 /**
