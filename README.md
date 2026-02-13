@@ -30,31 +30,33 @@
 
 ## Screenshots
 
-<!-- Replace with actual screenshots. Run `npm run dev` and capture at 1280x800. -->
+### Landing Page
+![Landing page with org selection](docs/screenshots/landing.png)
+*Organization selector — click to enter, or create a new org with the onboarding wizard*
 
 ### Dashboard
-![Dashboard with heatmap and KPI cards](docs/screenshots/dashboard.png)
-*Manager dashboard with technician x criteria heatmap, KPI sparklines, trend analysis, and filterable date ranges*
+![Dashboard with KPI cards and charts](docs/screenshots/dashboard.png)
+*Manager dashboard with KPI cards, criteria pass rate chart, trend analysis, and filterable date ranges*
 
 ### Transcript Evaluation
 ![Transcript detail with eval results](docs/screenshots/transcript-detail.png)
-*Split-panel view: transcript with speaker diarization on the left, pass/fail eval results with reasoning on the right*
+*Split-panel view: transcript on the left, pass/fail eval results with circular score indicator on the right*
 
 ### Recording Interface
 ![Recording page](docs/screenshots/recording.png)
-*Mobile-first recording UI with real-time waveform visualization and technician assignment*
+*One-tap recording with technician assignment, service type, and location metadata*
 
 ### Technician Profile
 ![Technician profile with radar chart](docs/screenshots/technician-profile.png)
-*Individual technician performance: radar chart across criteria, monthly trend line, and call history*
+*Radar chart showing per-criteria performance, scores over time, and criteria breakdown*
 
 ### Eval Criteria Settings
 ![Criteria management](docs/screenshots/criteria.png)
-*Drag-to-reorder evaluation criteria with inline editing, draft/published states, and few-shot examples*
+*Drag-to-reorder evaluation criteria with category badges, published/draft status, and active toggles*
 
 ### Mobile View
 ![Mobile recording interface](docs/screenshots/mobile.png)
-*Responsive mobile layout with bottom navigation and touch-optimized recording controls*
+*Responsive mobile layout with bottom navigation and touch-optimized recording button*
 
 ---
 
