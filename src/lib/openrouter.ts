@@ -17,7 +17,7 @@ interface OpenRouterResponse {
   }>;
 }
 
-const DEFAULT_MODEL = "anthropic/claude-opus-4-20250514";
+const DEFAULT_MODEL = "anthropic/claude-sonnet-4";
 
 export async function callOpenRouter(
   messages: ChatMessage[],
@@ -47,11 +47,12 @@ export async function callOpenRouter(
   if (!response.ok) {
     const errText = await response.text();
     console.error("OpenRouter error:", response.status, errText);
-    throw new Error(`OpenRouter API error: ${response.status}`);
+    throw new Error(`OpenRouter API error ${response.status}: ${errText.slice(0, 200)}`);
   }
 
-  const data: OpenRouterResponse = await response.json();
-  const content = data.choices?.[0]?.message?.content;
+  const data = await response.json();
+  console.log("OpenRouter response keys:", Object.keys(data));
+  const content = (data as OpenRouterResponse).choices?.[0]?.message?.content;
 
   if (!content) {
     throw new Error("Empty response from OpenRouter");

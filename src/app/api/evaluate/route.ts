@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     .single();
 
   if (transcriptError || !transcript) {
+    console.error("Eval: transcript fetch error:", transcriptError);
     return NextResponse.json(
       { error: "Transcript not found" },
       { status: 404 }
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
 
   const org = transcript.organizations as { name: string; industry: string } | null;
   if (!org) {
+    console.error("Eval: no org found on transcript", transcript.organization_id);
     return NextResponse.json(
       { error: "Organization not found for transcript" },
       { status: 404 }
@@ -106,19 +108,18 @@ export async function POST(request: Request) {
       throw new Error("Invalid response structure: missing results array");
     }
   } catch (err) {
-    console.error("Eval pipeline LLM error:", err);
+    const errMsg = err instanceof Error ? err.message : "LLM evaluation failed";
+    console.error("Eval pipeline LLM error:", errMsg, err);
     await supabase
       .from("transcripts")
       .update({
         eval_status: "failed",
-        metadata: {
-          error: err instanceof Error ? err.message : "LLM evaluation failed",
-        },
+        metadata: { error: errMsg },
       })
       .eq("id", transcriptId);
 
     return NextResponse.json(
-      { error: "AI evaluation failed" },
+      { error: `AI evaluation failed: ${errMsg}` },
       { status: 502 }
     );
   }
