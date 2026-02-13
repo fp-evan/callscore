@@ -15,7 +15,10 @@ export default function LandingPage() {
 
   useEffect(() => {
     fetch("/api/organizations")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to fetch");
+        return r.json();
+      })
       .then((data) => {
         setOrgs(Array.isArray(data) ? data : []);
         setLoading(false);

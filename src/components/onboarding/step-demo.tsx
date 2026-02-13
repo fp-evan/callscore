@@ -10,10 +10,12 @@ import type { OnboardingData } from "@/app/onboarding/page";
 
 export function StepDemo({
   data,
+  updateData,
   onBack,
   onFinish,
 }: {
   data: OnboardingData;
+  updateData: (partial: Partial<OnboardingData>) => void;
   onBack: () => void;
   onFinish: () => void;
 }) {
@@ -23,58 +25,32 @@ export function StepDemo({
   async function createOrg() {
     setSaving(true);
     try {
-      // 1. Create organization
-      const orgRes = await fetch("/api/organizations", {
+      const response = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: data.orgName,
+          orgName: data.orgName,
           industry: data.industry,
-          company_size: data.companySize,
-          notification_email: data.notificationEmail || null,
-          onboarding_completed: true,
+          companySize: data.companySize,
+          notificationEmail: data.notificationEmail || null,
+          criteria: data.criteria,
+          technicians: data.technicians,
         }),
       });
 
-      if (!orgRes.ok) throw new Error("Failed to create organization");
-      const org = await orgRes.json();
-
-      // 2. Create eval criteria
-      for (let i = 0; i < data.criteria.length; i++) {
-        const c = data.criteria[i];
-        await fetch("/api/eval-criteria", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            organization_id: org.id,
-            name: c.name,
-            description: c.description,
-            category: c.category,
-            sort_order: i,
-          }),
-        });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to create organization");
       }
 
-      // 3. Create technicians
-      for (const tech of data.technicians) {
-        if (tech.name.trim()) {
-          await fetch("/api/organizations/" + org.id + "/technicians", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: tech.name,
-              role: tech.role || null,
-            }),
-          });
-        }
-      }
-
-      // Update the data with the org ID
-      data.orgId = org.id;
+      const org = await response.json();
+      updateData({ orgId: org.id });
       setSaved(true);
       toast.success("Organization created successfully!");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Something went wrong. Please try again."
+      );
     } finally {
       setSaving(false);
     }

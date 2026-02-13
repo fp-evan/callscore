@@ -46,7 +46,11 @@ export async function GET(request: Request) {
   const { data, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("transcripts GET error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch transcripts" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json(data);
@@ -91,7 +95,11 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("transcripts POST error:", error);
+    return NextResponse.json(
+      { error: "Failed to create transcript" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json(data, { status: 201 });

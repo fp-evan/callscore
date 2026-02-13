@@ -1,5 +1,14 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { z } from "zod";
+
+const createOrgSchema = z.object({
+  name: z.string().min(1).max(200),
+  industry: z.string().min(1).max(100),
+  company_size: z.string().max(50).nullable().optional(),
+  notification_email: z.string().email().nullable().optional(),
+  onboarding_completed: z.boolean().default(false),
+});
 
 export async function GET() {
   const supabase = createServerClient();
@@ -9,7 +18,11 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("organizations GET error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch organizations" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json(data);
@@ -17,22 +30,34 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const supabase = createServerClient();
-  const body = await request.json();
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const parsed = createOrgSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
 
   const { data, error } = await supabase
     .from("organizations")
-    .insert({
-      name: body.name,
-      industry: body.industry,
-      company_size: body.company_size || null,
-      notification_email: body.notification_email || null,
-      onboarding_completed: body.onboarding_completed || false,
-    })
+    .insert(parsed.data)
     .select()
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("organizations POST error:", error);
+    return NextResponse.json(
+      { error: "Failed to create organization" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json(data, { status: 201 });

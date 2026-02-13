@@ -137,7 +137,7 @@ export default function OnboardingPage() {
             />
           )}
           {currentStep === 4 && (
-            <StepDemo data={data} onBack={back} onFinish={finish} />
+            <StepDemo data={data} updateData={updateData} onBack={back} onFinish={finish} />
           )}
         </div>
       </div>

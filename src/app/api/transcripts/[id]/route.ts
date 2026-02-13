@@ -15,7 +15,11 @@ export async function GET(
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 404 });
+    console.error("transcripts/[id] GET error:", error);
+    return NextResponse.json(
+      { error: "Transcript not found" },
+      { status: 404 }
+    );
   }
 
   return NextResponse.json(data);
@@ -45,7 +49,11 @@ export async function DELETE(
     .eq("id", id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("transcripts/[id] DELETE error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete transcript" },
+      { status: 500 }
+    );
   }
 
   // Clean up audio file from storage if exists
