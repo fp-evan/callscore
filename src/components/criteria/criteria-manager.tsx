@@ -510,6 +510,7 @@ function FewShotExamplesSection({
   };
 
   const handleDelete = async (exampleId: string) => {
+    const previousExamples = examples;
     onExamplesChange(examples.filter((e) => e.id !== exampleId));
     try {
       const response = await fetch(
@@ -519,6 +520,7 @@ function FewShotExamplesSection({
       if (!response.ok) throw new Error("Failed to delete");
     } catch {
       toast.error("Failed to delete example");
+      onExamplesChange(previousExamples);
     }
   };
 

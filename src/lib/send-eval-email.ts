@@ -11,9 +11,15 @@ export async function sendEvalEmailAsync(transcriptId: string): Promise<void> {
   }
 
   try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const internalSecret = process.env.INTERNAL_API_SECRET;
+    if (internalSecret) {
+      headers["x-internal-secret"] = internalSecret;
+    }
+
     const res = await fetch(`${appUrl}/api/send-email`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ transcriptId }),
     });
 

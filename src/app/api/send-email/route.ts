@@ -12,6 +12,15 @@ const sendEmailSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  // Internal-only guard: only allow calls with matching secret
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (internalSecret) {
+    const authHeader = request.headers.get("x-internal-secret");
+    if (authHeader !== internalSecret) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   const supabase = createServerClient();
 
   let body: unknown;
@@ -171,7 +180,7 @@ export async function POST(request: Request) {
 
     // 8. Update transcript metadata with email status
     const existingMetadata =
-      typeof transcript.metadata === "object" && transcript.metadata !== null
+      typeof transcript.metadata === "object" && transcript.metadata !== null && !Array.isArray(transcript.metadata)
         ? transcript.metadata
         : {};
 
@@ -195,7 +204,7 @@ export async function POST(request: Request) {
 
     // Store failure in metadata but don't fail the overall request
     const existingMetadata =
-      typeof transcript.metadata === "object" && transcript.metadata !== null
+      typeof transcript.metadata === "object" && transcript.metadata !== null && !Array.isArray(transcript.metadata)
         ? transcript.metadata
         : {};
 
