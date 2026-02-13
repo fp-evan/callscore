@@ -1,19 +1,24 @@
+import { createServerClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { TranscriptDetail } from "@/components/transcripts/transcript-detail";
+
 export default async function TranscriptDetailPage({
   params,
 }: {
   params: Promise<{ orgId: string; id: string }>;
 }) {
   const { orgId, id } = await params;
+  const supabase = createServerClient();
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Transcript Detail</h1>
-      <p className="text-muted-foreground">
-        Transcript viewer with eval results. Coming in Phase 2.
-      </p>
-      <p className="text-xs text-muted-foreground">
-        Org: {orgId} | Transcript: {id}
-      </p>
-    </div>
-  );
+  const { data: transcript, error } = await supabase
+    .from("transcripts")
+    .select("*, technicians(name, role)")
+    .eq("id", id)
+    .single();
+
+  if (error || !transcript) {
+    notFound();
+  }
+
+  return <TranscriptDetail orgId={orgId} transcript={transcript} />;
 }

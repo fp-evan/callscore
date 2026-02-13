@@ -26,7 +26,7 @@ export function OrgSwitcher({
   useEffect(() => {
     fetch("/api/organizations")
       .then((r) => r.json())
-      .then((data) => setOrgs(data))
+      .then((data) => setOrgs(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
 
