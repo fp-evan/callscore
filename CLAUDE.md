@@ -80,6 +80,21 @@ See call-eval-plan.md for full architecture and call-eval-design-addendum.md for
 - Recharts v3 onClick typing: cast event to `Record<string, unknown>`, assert `activePayload` with optional chaining guards
 - Skeleton layout: must mirror actual component container classes (grid cols, spacing) — zero layout shift on load
 - Trend chart: weekly/monthly bucketing based on date range length (>90 days = monthly); toggleable technician lines with 8 distinct colors
+- Email templates (`src/emails/`): modular @react-email/components with inline `React.CSSProperties` styles only — no Tailwind in emails; hex colors for client compatibility
+- Email template: eval-notification.tsx with hero score badge (green >=80%, amber >=50%, red <50%), 3-column metric cards, criteria breakdown (failed-first), CTA button
+- Send email API (`/api/send-email`): internal-only guard via `x-internal-secret` header checked against `INTERNAL_API_SECRET` env var; returns 401 if mismatch
+- Fire-and-forget email: `sendEvalEmailAsync()` in `src/lib/send-eval-email.ts` — HTTP fetch to `/api/send-email`, never throws, logs errors silently; skips mock transcripts
+- Email metadata tracking: stores `emailSent`, `emailId`, `emailError` in transcript `metadata` JSONB field
+- JSONB metadata spread guard: `typeof x === "object" && x !== null && !Array.isArray(x)` before spreading — prevents crash on unexpected array/primitive
+- Zod email union transform: `z.union([z.string().email(), z.literal("")]).nullable().transform(v => v === "" ? null : v)` — converts empty string to null for cleared email fields
+- Settings page: server component fetches org, passes to client `SettingsForm`; PATCH `/api/organizations/[id]` for notification email + org name
+- Loading skeletons: Next.js `loading.tsx` convention; skeleton containers must mirror actual component classes (grid, spacing) for zero layout shift
+- Metadata template: root `layout.tsx` exports `title.template: "%s — CallScore"`, pages export `title: "Page Name"` → auto-formatted
+- SVG favicon: inline data URI in root metadata `icons.icon` — no external file needed
+- Client page metadata: use parent `layout.tsx` to export metadata when page is `"use client"`
+- Touch device visibility: `md:opacity-0 md:group-hover:opacity-100` — always visible on mobile, hover-reveal on desktop
+- Fixed elements above mobile nav: `bottom-20 md:bottom-4` positions element above mobile nav on small screens
+- Aria labels on all interactive icon-only buttons (audio player, edit/delete actions)
 
 ## Known Issues
 - No RLS on any Supabase tables (by design — no auth in this app)
