@@ -8,7 +8,7 @@ See call-eval-plan.md for full architecture and call-eval-design-addendum.md for
 - Next.js 14+ (App Router) on Vercel
 - Supabase (Postgres + Storage)
 - Deepgram Nova-2 for transcription
-- Claude Opus via OpenRouter for AI evals
+- Claude Sonnet via OpenRouter for AI evals
 - Resend + react-email for notifications
 - shadcn/ui + Tailwind CSS for UI
 - Recharts for charts
@@ -46,6 +46,16 @@ See call-eval-plan.md for full architecture and call-eval-design-addendum.md for
 - Transcript detail: desktop uses 60/40 split panel, mobile uses shadcn Tabs component
 - Audio player: custom component wrapping HTML5 `<audio>` with shadcn Slider for scrubbing
 - Zod schemas validate all POST/PATCH endpoints; return 400 with `fieldErrors` on failure
+- OpenRouter: model ID format is `anthropic/claude-sonnet-4`, requires `HTTP-Referer` and `X-Title` headers
+- OpenRouter client (`src/lib/openrouter.ts`): AbortController timeout (45s default), sanitized error messages, `parseJsonResponse()` strips markdown fences
+- Eval pipeline (`/api/evaluate`): atomic status guard using `.in("eval_status", ["pending", "failed"])` prevents duplicate evals, returns 409 on conflict
+- Eval prompts (`src/lib/prompts/eval.ts`): system prompt sets evaluator role + rules, user prompt embeds transcript + criteria + few-shot examples + JSON schema
+- Criteria CRUD: full REST at `/api/eval-criteria/` with nested `/[id]/examples/` routes; drag-to-reorder via `/reorder` endpoint with `Promise.all()` parallel updates
+- Criteria inline editing: debounce 500ms for text fields via `useRef<Record<string, setTimeout>>`, instant save for booleans/selects/status
+- Auto-trigger eval on transcript detail mount: `useRef` guard + empty deps `useEffect` prevents double-triggers
+- Eval results display: circular progress indicator with color thresholds (green >=80%, amber >=50%, red <50%)
+- Re-run eval: resets `eval_status` to "pending" client-side, calls `/api/evaluate` — atomic guard allows re-run from "failed" state
+- Optimistic UI pattern: update local state immediately, POST async, rollback to `initialData` on error
 
 ## Known Issues
 - No RLS on any Supabase tables (by design — no auth in this app)
