@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -13,6 +13,10 @@ import {
   User,
   Trash2,
   Play,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { AudioPlayer } from "./audio-player";
-import type { Transcript } from "@/lib/supabase/types";
+import type { Transcript, EvalResult } from "@/lib/supabase/types";
 
 type DiarizedSegment = {
   speaker: number;
@@ -42,9 +46,14 @@ type TranscriptWithTechnician = Transcript & {
   technicians: { name: string; role: string | null } | null;
 };
 
+type EvalResultWithCriteria = EvalResult & {
+  eval_criteria: { name: string; category: string | null } | null;
+};
+
 interface Props {
   orgId: string;
   transcript: TranscriptWithTechnician;
+  initialEvalResults: EvalResultWithCriteria[];
 }
 
 const SOURCE_CONFIG = {
@@ -84,10 +93,15 @@ function formatDuration(seconds: number | null) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function TranscriptDetail({ orgId, transcript }: Props) {
+export function TranscriptDetail({ orgId, transcript: initialTranscript, initialEvalResults }: Props) {
   const router = useRouter();
+  const [transcript, setTranscript] = useState(initialTranscript);
+  const [evalResults, setEvalResults] = useState(initialEvalResults);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
+  const [expandedResult, setExpandedResult] = useState<string | null>(null);
+  const hasTriggeredEval = useRef(false);
 
   const source =
     SOURCE_CONFIG[transcript.source as keyof typeof SOURCE_CONFIG] ||
@@ -100,6 +114,88 @@ export function TranscriptDetail({ orgId, transcript }: Props) {
   const diarized = Array.isArray(transcript.diarized_transcript)
     ? (transcript.diarized_transcript as unknown as DiarizedSegment[])
     : null;
+
+  const passedCount = evalResults.filter((r) => r.passed).length;
+  const totalCount = evalResults.length;
+
+  // Auto-trigger evaluation for pending transcripts
+  useEffect(() => {
+    if (
+      transcript.eval_status === "pending" &&
+      evalResults.length === 0 &&
+      !hasTriggeredEval.current
+    ) {
+      hasTriggeredEval.current = true;
+      runEvaluation();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const runEvaluation = async () => {
+    setEvaluating(true);
+    setTranscript((prev) => ({ ...prev, eval_status: "processing" }));
+
+    try {
+      const response = await fetch("/api/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcriptId: transcript.id }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Evaluation failed");
+      }
+
+      const data = await response.json();
+
+      // Update state directly from the response
+      setTranscript((prev) => ({
+        ...prev,
+        eval_status: "completed",
+        summary: data.summary,
+      }));
+
+      // Map the response results to our format
+      if (data.results && Array.isArray(data.results)) {
+        const mapped: EvalResultWithCriteria[] = data.results.map(
+          (r: {
+            criteria_id: string;
+            criteria_name: string;
+            passed: boolean;
+            confidence: number;
+            reasoning: string;
+            excerpt: string;
+            excerpt_start: number;
+            excerpt_end: number;
+          }) => ({
+            id: crypto.randomUUID(),
+            transcript_id: transcript.id,
+            eval_criteria_id: r.criteria_id,
+            passed: r.passed,
+            confidence: r.confidence,
+            reasoning: r.reasoning,
+            transcript_excerpt: r.excerpt,
+            excerpt_start_index: r.excerpt_start,
+            excerpt_end_index: r.excerpt_end,
+            eval_run_id: data.evalRunId,
+            created_at: new Date().toISOString(),
+            eval_criteria: { name: r.criteria_name, category: null },
+          })
+        );
+        setEvalResults(mapped);
+      }
+
+      setEvaluating(false);
+      toast.success("Evaluation complete!");
+    } catch (err) {
+      console.error("Eval error:", err);
+      setTranscript((prev) => ({ ...prev, eval_status: "failed" }));
+      setEvaluating(false);
+      toast.error(
+        err instanceof Error ? err.message : "Evaluation failed. Please try again."
+      );
+    }
+  };
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -205,11 +301,16 @@ export function TranscriptDetail({ orgId, transcript }: Props) {
         )}
       </div>
 
-      {/* Summary placeholder */}
+      {/* Summary */}
       {transcript.summary ? (
         <Card>
           <CardContent className="py-3 text-sm">{transcript.summary}</CardContent>
         </Card>
+      ) : evaluating ? (
+        <div className="flex items-center gap-2 text-sm text-amber-600">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Generating summary...
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground italic">
           Summary will appear after evaluation.
@@ -220,12 +321,8 @@ export function TranscriptDetail({ orgId, transcript }: Props) {
 
   const transcriptPanel = (
     <div className="space-y-4">
-      {/* Audio player for recorded transcripts */}
-      {transcript.audio_url && (
-        <AudioPlayer src={transcript.audio_url} />
-      )}
+      {transcript.audio_url && <AudioPlayer src={transcript.audio_url} />}
 
-      {/* Diarized transcript view */}
       {diarized && diarized.length > 0 ? (
         <div className="space-y-2">
           {diarized.map((segment, i) => {
@@ -258,37 +355,177 @@ export function TranscriptDetail({ orgId, transcript }: Props) {
 
   const evalPanel = (
     <div className="space-y-4">
-      {/* Circular progress placeholder */}
-      <div className="flex flex-col items-center py-6">
-        <div className="relative w-24 h-24">
-          <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
-            <circle
-              cx="48"
-              cy="48"
-              r="40"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="6"
-              className="text-muted/30"
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-            —
+      {/* Score circle */}
+      {evalResults.length > 0 ? (
+        <div className="flex flex-col items-center py-4">
+          <div className="relative w-24 h-24">
+            <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+              <circle
+                cx="48"
+                cy="48"
+                r="40"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                className="text-muted/30"
+              />
+              <circle
+                cx="48"
+                cy="48"
+                r="40"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeDasharray={`${(passedCount / totalCount) * 251.3} 251.3`}
+                strokeLinecap="round"
+                className={
+                  passedCount / totalCount >= 0.8
+                    ? "text-green-500"
+                    : passedCount / totalCount >= 0.5
+                    ? "text-amber-500"
+                    : "text-red-500"
+                }
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-lg font-semibold">
+                {passedCount}/{totalCount}
+              </span>
+              <span className="text-xs text-muted-foreground">passed</span>
+            </div>
           </div>
         </div>
-      </div>
-
-      <Card>
-        <CardContent className="py-6 text-center">
-          <p className="text-muted-foreground text-sm">
-            Evaluation results will appear here after analysis.
+      ) : evaluating ? (
+        <div className="flex flex-col items-center py-8 gap-3">
+          <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
+          <p className="text-sm font-medium text-amber-600">
+            Running AI evaluation...
           </p>
-          <Button className="mt-4" disabled variant="outline">
-            <Play className="mr-2 h-4 w-4" />
-            Run Evaluation
-          </Button>
-        </CardContent>
-      </Card>
+          <p className="text-xs text-muted-foreground">
+            This may take 15-30 seconds
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center py-6">
+          <div className="relative w-24 h-24">
+            <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+              <circle
+                cx="48"
+                cy="48"
+                r="40"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                className="text-muted/30"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+              —
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Results list */}
+      {evalResults.length > 0 ? (
+        <div className="space-y-2">
+          {evalResults.map((result) => (
+            <div key={result.id} className="rounded-md border">
+              <button
+                onClick={() =>
+                  setExpandedResult(
+                    expandedResult === result.id ? null : result.id
+                  )
+                }
+                className="w-full flex items-center gap-3 p-3 text-left hover:bg-accent/50 transition-colors"
+              >
+                {result.passed ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                )}
+                <span className="text-sm font-medium flex-1 min-w-0 truncate">
+                  {result.eval_criteria?.name || "Unknown Criterion"}
+                </span>
+                {result.eval_criteria?.category && (
+                  <Badge variant="secondary" className="text-xs shrink-0">
+                    {result.eval_criteria.category}
+                  </Badge>
+                )}
+                <ChevronDown
+                  className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${
+                    expandedResult === result.id ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {expandedResult === result.id && (
+                <div className="border-t px-3 pb-3 pt-2 space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    {result.reasoning}
+                  </p>
+                  {result.transcript_excerpt && (
+                    <div className="rounded bg-amber-50 border border-amber-200 p-2">
+                      <p className="text-xs font-medium text-amber-700 mb-1">
+                        Evidence
+                      </p>
+                      <p className="text-xs text-amber-900 italic">
+                        &ldquo;{result.transcript_excerpt}&rdquo;
+                      </p>
+                    </div>
+                  )}
+                  {result.confidence != null && (
+                    <p className="text-xs text-muted-foreground">
+                      Confidence: {Math.round(result.confidence * 100)}%
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : !evaluating ? (
+        <Card>
+          <CardContent className="py-6 text-center">
+            <p className="text-muted-foreground text-sm">
+              {transcript.eval_status === "failed"
+                ? "Evaluation failed. Click below to try again."
+                : "No evaluation results yet."}
+            </p>
+            <Button
+              className="mt-4"
+              variant="outline"
+              onClick={runEvaluation}
+              disabled={evaluating}
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Run Evaluation
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* Re-run button (when results exist) */}
+      {evalResults.length > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={runEvaluation}
+          disabled={evaluating}
+        >
+          {evaluating ? (
+            <>
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              Re-running...
+            </>
+          ) : (
+            <>
+              <Play className="mr-2 h-3.5 w-3.5" />
+              Re-run Evaluation
+            </>
+          )}
+        </Button>
+      )}
     </div>
   );
 
@@ -325,6 +562,11 @@ export function TranscriptDetail({ orgId, transcript }: Props) {
             </TabsTrigger>
             <TabsTrigger value="evaluation" className="flex-1">
               Evaluation
+              {evalResults.length > 0 && (
+                <Badge variant="secondary" className="ml-1.5 text-xs">
+                  {passedCount}/{totalCount}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="transcript" className="mt-4">

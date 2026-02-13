@@ -20,5 +20,18 @@ export default async function TranscriptDetailPage({
     notFound();
   }
 
-  return <TranscriptDetail orgId={orgId} transcript={transcript} />;
+  // Fetch eval results with criterion names
+  const { data: evalResults } = await supabase
+    .from("eval_results")
+    .select("*, eval_criteria(name, category)")
+    .eq("transcript_id", id)
+    .order("created_at");
+
+  return (
+    <TranscriptDetail
+      orgId={orgId}
+      transcript={transcript}
+      initialEvalResults={evalResults || []}
+    />
+  );
 }
