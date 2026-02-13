@@ -16,7 +16,7 @@ export interface OnboardingData {
   companySize: string;
   criteria: EvalTemplateCriteria[];
   technicians: { name: string; role: string }[];
-  notificationEmail: string;
+  notificationEmails: string[];
   orgId: string | null;
 }
 
@@ -37,7 +37,7 @@ export default function OnboardingPage() {
     companySize: "",
     criteria: [],
     technicians: [],
-    notificationEmail: "",
+    notificationEmails: [],
     orgId: null,
   });
 
@@ -57,7 +57,7 @@ export default function OnboardingPage() {
 
   function finish() {
     if (data.orgId) {
-      router.push(`/org/${data.orgId}/dashboard`);
+      router.push(`/org/${data.orgId}/record`);
     } else {
       router.push("/");
     }

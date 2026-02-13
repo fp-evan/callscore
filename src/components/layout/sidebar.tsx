@@ -14,8 +14,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { label: "Dashboard", href: "dashboard", icon: LayoutDashboard },
   { label: "Record", href: "record", icon: Mic },
+  { label: "Dashboard", href: "dashboard", icon: LayoutDashboard },
   { label: "Paste", href: "paste", icon: ClipboardPaste },
   { label: "Transcripts", href: "transcripts", icon: FileText },
   { label: "Technicians", href: "technicians", icon: Users },
@@ -36,7 +36,12 @@ export function Sidebar({ orgId }: { orgId: string }) {
       <nav className="flex-1 space-y-1 p-3">
         {navItems.map((item) => {
           const href = `/org/${orgId}/${item.href}`;
-          const isActive = pathname.startsWith(href);
+          const anyActive = navItems.some((n) =>
+            pathname.startsWith(`/org/${orgId}/${n.href}`)
+          );
+          const isActive =
+            pathname.startsWith(href) ||
+            (!anyActive && item.href === "record");
           return (
             <Link
               key={item.href}

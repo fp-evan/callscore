@@ -12,8 +12,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { label: "Dashboard", href: "dashboard", icon: LayoutDashboard },
   { label: "Record", href: "record", icon: Mic },
+  { label: "Dashboard", href: "dashboard", icon: LayoutDashboard },
   { label: "Transcripts", href: "transcripts", icon: FileText },
   { label: "Techs", href: "technicians", icon: Users },
   { label: "Settings", href: "settings", icon: Settings },
@@ -27,7 +27,12 @@ export function MobileNav({ orgId }: { orgId: string }) {
       <div className="flex items-center justify-around">
         {tabs.map((tab) => {
           const href = `/org/${orgId}/${tab.href}`;
-          const isActive = pathname.startsWith(href);
+          const anyActive = tabs.some((t) =>
+            pathname.startsWith(`/org/${orgId}/${t.href}`)
+          );
+          const isActive =
+            pathname.startsWith(href) ||
+            (!anyActive && tab.href === "record");
           return (
             <Link
               key={tab.href}

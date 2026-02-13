@@ -56,7 +56,7 @@ export default function LandingPage() {
               <Card
                 key={org.id}
                 className="cursor-pointer transition-colors hover:bg-accent/50"
-                onClick={() => router.push(`/org/${org.id}/dashboard`)}
+                onClick={() => router.push(`/org/${org.id}/record`)}
               >
                 <CardContent className="flex items-center gap-4 p-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">

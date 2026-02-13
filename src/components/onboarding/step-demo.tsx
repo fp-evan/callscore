@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, ArrowRight } from "lucide-react";
+import { Loader2, CheckCircle2, Mic } from "lucide-react";
 import { toast } from "sonner";
 import type { OnboardingData } from "@/app/onboarding/page";
 
@@ -32,7 +32,7 @@ export function StepDemo({
           orgName: data.orgName,
           industry: data.industry,
           companySize: data.companySize,
-          notificationEmail: data.notificationEmail || null,
+          notificationEmails: data.notificationEmails.length > 0 ? data.notificationEmails : null,
           criteria: data.criteria,
           technicians: data.technicians,
         }),
@@ -80,9 +80,11 @@ export function StepDemo({
                   <p className="font-medium">{data.companySize}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Notification Email</p>
+                  <p className="text-muted-foreground">Notification Emails</p>
                   <p className="font-medium">
-                    {data.notificationEmail || "Not set"}
+                    {data.notificationEmails.length > 0
+                      ? data.notificationEmails.join(", ")
+                      : "Not set"}
                   </p>
                 </div>
               </div>
@@ -147,8 +149,8 @@ export function StepDemo({
             </p>
           </div>
           <Button onClick={onFinish} size="lg">
-            Go to Dashboard
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <Mic className="mr-2 h-4 w-4" />
+            Start Recording
           </Button>
         </div>
       )}

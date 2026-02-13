@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MultiEmailInput } from "@/components/ui/multi-email-input";
 import { toast } from "sonner";
 import type { Organization } from "@/lib/supabase/types";
 
@@ -14,8 +15,8 @@ interface Props {
 }
 
 export function SettingsForm({ org }: Props) {
-  const [notificationEmail, setNotificationEmail] = useState(
-    org.notification_email || ""
+  const [notificationEmails, setNotificationEmails] = useState<string[]>(
+    Array.isArray(org.notification_email) ? org.notification_email : []
   );
   const [orgName, setOrgName] = useState(org.name);
   const [saving, setSaving] = useState(false);
@@ -28,7 +29,7 @@ export function SettingsForm({ org }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: orgName.trim(),
-          notification_email: notificationEmail.trim() || null,
+          notification_email: notificationEmails.length > 0 ? notificationEmails : null,
         }),
       });
       if (!res.ok) throw new Error("Failed to save");
@@ -72,7 +73,7 @@ export function SettingsForm({ org }: Props) {
         </CardContent>
       </Card>
 
-      {/* Notification Email */}
+      {/* Notification Emails */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -82,17 +83,16 @@ export function SettingsForm({ org }: Props) {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-2">
-            <Label htmlFor="notification-email">Notification Email</Label>
-            <Input
-              id="notification-email"
-              type="email"
+            <Label htmlFor="notification-emails">Notification Emails</Label>
+            <MultiEmailInput
+              id="notification-emails"
+              emails={notificationEmails}
+              onChange={setNotificationEmails}
               placeholder="manager@company.com"
-              value={notificationEmail}
-              onChange={(e) => setNotificationEmail(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Receive a summary email after each call evaluation. Leave blank to
-              disable.
+              Receive a summary email after each call evaluation. Remove all
+              emails to disable notifications.
             </p>
           </div>
         </CardContent>

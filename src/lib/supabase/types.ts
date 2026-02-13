@@ -68,7 +68,7 @@ export interface Organization {
   industry: string;
   company_size: string | null;
   onboarding_completed: boolean;
-  notification_email: string | null;
+  notification_email: string[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -79,7 +79,7 @@ export interface OrganizationInsert {
   industry: string;
   company_size?: string | null;
   onboarding_completed?: boolean;
-  notification_email?: string | null;
+  notification_email?: string[] | null;
 }
 
 export interface OrganizationUpdate {
@@ -87,7 +87,7 @@ export interface OrganizationUpdate {
   industry?: string;
   company_size?: string | null;
   onboarding_completed?: boolean;
-  notification_email?: string | null;
+  notification_email?: string[] | null;
 }
 
 // ============================================================

@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MultiEmailInput } from "@/components/ui/multi-email-input";
 import { Mail } from "lucide-react";
 import type { OnboardingData } from "@/app/onboarding/page";
 
@@ -24,19 +24,18 @@ export function StepNotification({
           <Mail className="h-6 w-6 text-primary" />
         </div>
         <p className="text-center text-sm text-muted-foreground max-w-md">
-          Get a summary email after each call evaluation. You can change this
-          anytime in settings.
+          Get a summary email after each call evaluation. Add up to 10 email
+          addresses. You can change this anytime in settings.
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">Notification Email</Label>
-        <Input
-          id="email"
-          type="email"
+        <Label htmlFor="emails">Notification Emails</Label>
+        <MultiEmailInput
+          id="emails"
+          emails={data.notificationEmails}
+          onChange={(emails) => updateData({ notificationEmails: emails })}
           placeholder="manager@company.com"
-          value={data.notificationEmail}
-          onChange={(e) => updateData({ notificationEmail: e.target.value })}
         />
       </div>
 

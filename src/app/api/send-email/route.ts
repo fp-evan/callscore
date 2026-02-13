@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     id: string;
     name: string;
     industry: string;
-    notification_email: string | null;
+    notification_email: string[] | null;
   } | null;
 
   if (!org) {
@@ -69,8 +69,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // 2. Check if org has notification email
-  if (!org.notification_email) {
+  // 2. Check if org has notification emails
+  if (!org.notification_email || !Array.isArray(org.notification_email) || org.notification_email.length === 0) {
     return NextResponse.json({
       sent: false,
       reason: "no_email_configured",

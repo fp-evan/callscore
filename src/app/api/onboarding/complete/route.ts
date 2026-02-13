@@ -6,7 +6,7 @@ const onboardingSchema = z.object({
   orgName: z.string().min(1).max(200),
   industry: z.string().min(1).max(100),
   companySize: z.string().max(50).optional(),
-  notificationEmail: z.string().email().nullable().optional(),
+  notificationEmails: z.array(z.string().email()).max(10).nullable().optional(),
   criteria: z.array(
     z.object({
       name: z.string().min(1).max(200),
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { orgName, industry, companySize, notificationEmail, criteria, technicians } =
+  const { orgName, industry, companySize, notificationEmails, criteria, technicians } =
     parsed.data;
 
   // 1. Create organization
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       name: orgName,
       industry,
       company_size: companySize || null,
-      notification_email: notificationEmail || null,
+      notification_email: notificationEmails && notificationEmails.length > 0 ? notificationEmails : null,
       onboarding_completed: true,
     })
     .select()

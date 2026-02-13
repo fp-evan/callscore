@@ -6,7 +6,7 @@ const updateOrgSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   industry: z.string().min(1).max(100).optional(),
   company_size: z.string().max(50).nullable().optional(),
-  notification_email: z.union([z.string().email(), z.literal("")]).nullable().transform((v) => (v === "" ? null : v)).optional(),
+  notification_email: z.array(z.string().email()).max(10).nullable().optional(),
   onboarding_completed: z.boolean().optional(),
 });
 
