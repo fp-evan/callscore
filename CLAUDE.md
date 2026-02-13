@@ -69,6 +69,17 @@ See call-eval-plan.md for full architecture and call-eval-design-addendum.md for
 - Zod array bounds: `specialties` schema uses `.max(20)` on array, `.max(100)` on each string
 - Never `.sort()` a memoized array directly — use `[...array].sort()` to avoid mutating cached value
 - `NEXT_PUBLIC_APP_URL` must be set for server-to-server eval triggers; mock-call route skips eval trigger if not set
+- Dashboard API (`/api/dashboard/[orgId]`): single GET endpoint returns 7 aggregated datasets (overview, criteriaPassRates, heatmapData, trendData, needsAttention, sparklineData, filter metadata)
+- Dashboard aggregation: pre-compute `transcriptMap`, `resultsByCriteria`, `resultsByTranscript`, `completedByTech` Maps once for O(1) lookups instead of O(T*C*E) nested loops
+- Dashboard date validation: `isNaN(date.getTime())` guard on parsed startDate/endDate query params, return 400 on invalid
+- Dashboard filter state: URL-based via `useSearchParams` init + `router.replace()` on change; shared `filtersToParams()` helper avoids duplication
+- Dashboard fetch: `AbortController` via `useRef` cancels stale requests on filter change; catch `AbortError` and return early; only set loading=false if not aborted
+- Dashboard response validation: `Array.isArray(json.criteriaPassRates)` guard before `setData()` — prevents invalid data from corrupting client state
+- Custom heatmap: HTML table with merged `getCellClasses()` returning bg + text Tailwind classes (Recharts has no native heatmap)
+- Sparkline gradient IDs: use `React.useId()` for unique per-instance SVG gradient IDs — prevents collisions when multiple sparklines render
+- Recharts v3 onClick typing: cast event to `Record<string, unknown>`, assert `activePayload` with optional chaining guards
+- Skeleton layout: must mirror actual component container classes (grid cols, spacing) — zero layout shift on load
+- Trend chart: weekly/monthly bucketing based on date range length (>90 days = monthly); toggleable technician lines with 8 distinct colors
 
 ## Known Issues
 - No RLS on any Supabase tables (by design — no auth in this app)
