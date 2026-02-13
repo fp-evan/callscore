@@ -56,6 +56,19 @@ See call-eval-plan.md for full architecture and call-eval-design-addendum.md for
 - Eval results display: circular progress indicator with color thresholds (green >=80%, amber >=50%, red <50%)
 - Re-run eval: resets `eval_status` to "pending" client-side, calls `/api/evaluate` — atomic guard allows re-run from "failed" state
 - Optimistic UI pattern: update local state immediately, POST async, rollback to `initialData` on error
+- Technician stats: shared `computeTechnicianStats()` in `src/lib/technician-stats.ts` — used by both server pages and API routes
+- Technician profile: server component fetches all data (technician, transcripts, eval results, criteria), passes to client `TechnicianProfile` with tabs (Overview, Call History, Training)
+- Recharts radar chart: needs >=3 data points, falls back to horizontal bar chart for fewer; tooltip formatter must not annotate `value` type (use `Number(value)`)
+- Recharts line chart: monthly aggregation via `YYYY-MM` key Map, `ReferenceLine` at 80% target
+- Mock call generation (`/api/mock-call`): OpenRouter with temperature 0.7, 60s timeout; stores as `source: 'mock'`, auto-triggers eval
+- Mock call prompts (`src/lib/prompts/mock-call.ts`): wrap user scenario in `<scenario>` XML delimiters for prompt injection defense
+- Industry-specific scenario suggestions: `INDUSTRY_SCENARIOS` constant map in technician profile component
+- Mock transcript badges: purple styling (`bg-purple-50 text-purple-700 border-purple-200`) in transcript list and detail
+- Delete confirmation: use shadcn `AlertDialog` for all destructive operations (technician delete, etc.)
+- UUID validation on path parameters: regex check at top of `[id]` route handlers
+- Zod array bounds: `specialties` schema uses `.max(20)` on array, `.max(100)` on each string
+- Never `.sort()` a memoized array directly — use `[...array].sort()` to avoid mutating cached value
+- `NEXT_PUBLIC_APP_URL` must be set for server-to-server eval triggers; mock-call route skips eval trigger if not set
 
 ## Known Issues
 - No RLS on any Supabase tables (by design — no auth in this app)
